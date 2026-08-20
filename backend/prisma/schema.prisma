@@ -1,0 +1,165 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  CLASS_OWNER
+}
+
+enum Medium {
+  ENGLISH
+  MARATHI
+}
+
+enum QuestionType {
+  MCQ
+  SHORT_ANSWER
+  LONG_ANSWER
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(CLASS_OWNER)
+  isActive     Boolean  @default(true)
+
+  classes Class[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Class {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  medium      Medium
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id])
+
+  subjects Subject[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+}
+
+model Subject {
+  id   String @id @default(cuid())
+  name String
+
+  classId String
+  class   Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  chapters       Chapter[]
+  questions      Question[]
+  questionPapers QuestionPaper[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([classId, name])
+}
+
+model Chapter {
+  id        String @id @default(cuid())
+  name      String
+  chapterNo Int?
+
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  questions Question[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([subjectId, name])
+}
+
+model Question {
+  id           String       @id @default(cuid())
+  questionText String
+  type         QuestionType @default(MCQ)
+  difficulty   Difficulty   @default(MEDIUM)
+  medium       Medium
+
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  chapterId String
+  chapter   Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  options        QuestionOption[]
+  paperQuestions QuestionPaperQuestion[]
+
+  correctAnswer String?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([chapterId])
+  @@index([subjectId])
+}
+
+model QuestionOption {
+  id         String @id @default(cuid())
+  optionText String
+  optionKey  String
+
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([questionId, optionKey])
+}
+
+model QuestionPaper {
+  id     String @id @default(cuid())
+  title  String
+  medium Medium
+
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id])
+
+  totalMarks      Int?
+  durationMinutes Int?
+
+  questions QuestionPaperQuestion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model QuestionPaperQuestion {
+  id String @id @default(cuid())
+
+  paperId String
+  paper   QuestionPaper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id])
+
+  questionNo Int
+
+  @@unique([paperId, questionId])
+  @@unique([paperId, questionNo])
+}
