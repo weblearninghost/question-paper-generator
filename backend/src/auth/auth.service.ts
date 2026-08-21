@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dto/login.dto';
+import { BootstrapDto } from './dto/bootstrap.dto';
 
 @Injectable()
 export class AuthService {
@@ -78,6 +79,45 @@ export class AuthService {
         email: user.email,
         role: user.role,
       },
+    };
+  }
+  async bootstrapSuperAdmin(bootstrapDto: BootstrapDto) {
+    const { name, email, password } = bootstrapDto;
+
+    const existingAdmin = await this.prisma.user.findFirst({
+      where: {
+        role: 'SUPER_ADMIN',
+      },
+    });
+
+    if (existingAdmin) {
+      throw new ConflictException('Super Admin already exists');
+    }
+
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
+      throw new ConflictException('Email already registered');
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const user = await this.prisma.user.create({
+      data: {
+        name,
+        email,
+        passwordHash,
+        role: 'SUPER_ADMIN',
+      },
+    });
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
     };
   }
 }

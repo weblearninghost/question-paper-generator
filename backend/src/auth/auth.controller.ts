@@ -4,6 +4,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import type { Request } from 'express';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { BootstrapDto } from './dto/bootstrap.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -22,5 +23,9 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   getMe(@Req() req: Request) {
     return req.user;
+  }
+  @Post('bootstrap')
+  bootstrap(@Body() bootstrapDto: BootstrapDto) {
+    return this.authService.bootstrapSuperAdmin(bootstrapDto);
   }
 }
