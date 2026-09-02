@@ -9,6 +9,7 @@ datasource db {
 enum UserRole {
   SUPER_ADMIN
   CLASS_OWNER
+  STUDENT
 }
 
 enum Medium {
@@ -28,35 +29,137 @@ enum Difficulty {
   HARD
 }
 
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum MediaType {
+  IMAGE
+}
+
+enum MediaLocation {
+  QUESTION
+  ANSWER
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
   email        String   @unique
   passwordHash String
-  role         UserRole @default(CLASS_OWNER)
+  role         UserRole @default(STUDENT)
   isActive     Boolean  @default(true)
 
-  classes Class[]
+  tuition Tuition?
+
+  subscriptions Subscription[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Tuition {
+  id             String  @id @default(cuid())
+  name           String
+  phone          String?
+  address        String?
+  logoStorageKey String?
+  logoFileName   String?
+  logoMimeType   String?
+
+  ownerId String @unique
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  questionPapers QuestionPaper[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Class {
-  id          String  @id @default(cuid())
-  name        String
-  description String?
-  medium      Medium
+  id      String @id @default(cuid())
+  name    String @unique
+  classNo Int    @unique
 
-  ownerId String
-  owner   User   @relation(fields: [ownerId], references: [id])
+  subscriptionClasses SubscriptionClass[]
+  questionPapers      QuestionPaper[]
 
   subjects Subject[]
+
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+  subscriptionPlanClasses SubscriptionPlanClass[]
+}
+
+model SubscriptionPlan {
+  id String @id @default(cuid())
+
+  name        String
+  description String?
+  price       Decimal @db.Decimal(10, 2)
+
+  durationDays Int
+
+  isActive Boolean @default(true)
+
+  subscriptions Subscription[]
+
+  classes SubscriptionPlanClass[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SubscriptionPlanClass {
+  id String @id @default(cuid())
+
+  planId String
+  plan   SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  classId String
+  class   Class  @relation(fields: [classId], references: [id])
+
+  @@unique([planId, classId])
+  @@index([classId])
+}
+
+model Subscription {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  planId String
+  plan   SubscriptionPlan @relation(fields: [planId], references: [id])
+
+  startDate DateTime
+  endDate   DateTime
+
+  status SubscriptionStatus @default(ACTIVE)
+
+  classes SubscriptionClass[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([ownerId])
+  @@index([userId])
+  @@index([planId])
+  @@index([status])
+}
+
+model SubscriptionClass {
+  id String @id @default(cuid())
+
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  classId String
+  class   Class  @relation(fields: [classId], references: [id])
+
+  @@unique([subscriptionId, classId])
+  @@index([classId])
 }
 
 model Subject {
@@ -93,11 +196,22 @@ model Chapter {
 }
 
 model Question {
-  id           String       @id @default(cuid())
+  id String @id @default(cuid())
+
+  // ID supplied by Excel/import package
+  externalId String
+
   questionText String
-  type         QuestionType @default(MCQ)
-  difficulty   Difficulty   @default(MEDIUM)
-  medium       Medium
+
+  // Rich content: text, formulas, formatting, etc.
+  questionContent Json
+
+  // Rich answer content
+  answerContent Json?
+
+  type       QuestionType @default(MCQ)
+  difficulty Difficulty   @default(MEDIUM)
+  medium     Medium
 
   subjectId String
   subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
@@ -105,18 +219,21 @@ model Question {
   chapterId String
   chapter   Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
 
-  options        QuestionOption[]
-  paperQuestions QuestionPaperQuestion[]
+  options QuestionOption[]
+  media   QuestionMedia[]
 
-  correctAnswer String?
+  paperQuestions QuestionPaperQuestion[]
 
   isActive Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([chapterId, medium, externalId])
   @@index([chapterId])
   @@index([subjectId])
+  @@index([type])
+  @@index([difficulty])
 }
 
 model QuestionOption {
@@ -132,10 +249,38 @@ model QuestionOption {
   @@unique([questionId, optionKey])
 }
 
+model QuestionMedia {
+  id String @id @default(cuid())
+
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  type     MediaType
+  location MediaLocation
+
+  // Object storage path/key
+  storageKey String
+
+  fileName String?
+  mimeType String?
+
+  sortOrder Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([questionId])
+}
+
 model QuestionPaper {
   id     String @id @default(cuid())
   title  String
   medium Medium
+
+  tuitionId String
+  tuition   Tuition @relation(fields: [tuitionId], references: [id], onDelete: Cascade)
+
+  classId String
+  class   Class  @relation(fields: [classId], references: [id])
 
   subjectId String
   subject   Subject @relation(fields: [subjectId], references: [id])
@@ -147,6 +292,10 @@ model QuestionPaper {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([tuitionId])
+  @@index([classId])
+  @@index([subjectId])
 }
 
 model QuestionPaperQuestion {
@@ -159,7 +308,11 @@ model QuestionPaperQuestion {
   question   Question @relation(fields: [questionId], references: [id])
 
   questionNo Int
+  marks      Int
+
+  sectionName String?
 
   @@unique([paperId, questionId])
   @@unique([paperId, questionNo])
+  @@index([questionId])
 }
