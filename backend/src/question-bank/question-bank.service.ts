@@ -414,6 +414,229 @@ export class QuestionBankService {
     };
   }
 
+  async importExcel(file: Express.Multer.File) {
+    /*
+     * ---------------------------------------------------------
+     * 1. Validate and normalize Excel file
+     * ---------------------------------------------------------
+     */
+
+    const preview = await this.previewExcel(file);
+    const questions = preview.questions;
+
+    /*
+     * ---------------------------------------------------------
+     * 2. Database transaction
+     * ---------------------------------------------------------
+     */
+
+    return this.prisma.$transaction(async (tx) => {
+      let importedQuestions = 0;
+      let importedOptions = 0;
+
+      for (const question of questions) {
+        /*
+         * -----------------------------------------------------
+         * Find Class
+         * -----------------------------------------------------
+         */
+
+        const className = question.className.trim().replace(/^class\s*/i, '');
+
+        const classNo = Number(className);
+
+        if (!Number.isInteger(classNo) || classNo < 1 || classNo > 10) {
+          throw new BadRequestException(
+            `Invalid class "${question.className}". Class must be between 1 and 10.`,
+          );
+        }
+
+        const classRecord = await tx.class.findUnique({
+          where: {
+            classNo,
+          },
+        });
+
+        if (!classRecord) {
+          throw new BadRequestException(
+            `Class "${question.className}" does not exist`,
+          );
+        }
+        /*
+         * -----------------------------------------------------
+         * Find Subject
+         * -----------------------------------------------------
+         */
+
+        const subject = await tx.subject.upsert({
+          where: {
+            classId_name: {
+              classId: classRecord.id,
+              name: question.subjectName,
+            },
+          },
+          update: {},
+          create: {
+            name: question.subjectName,
+            classId: classRecord.id,
+          },
+        });
+
+        /*
+         * -----------------------------------------------------
+         * Find Chapter
+         * -----------------------------------------------------
+         */
+
+        const chapter = await tx.chapter.upsert({
+          where: {
+            subjectId_name: {
+              subjectId: subject.id,
+              name: question.chapterName,
+            },
+          },
+          update: {
+            chapterNo: question.chapterNo,
+          },
+          create: {
+            name: question.chapterName,
+            chapterNo: question.chapterNo,
+            subjectId: subject.id,
+          },
+        });
+
+        /*
+         * -----------------------------------------------------
+         * Check Chapter Number
+         * -----------------------------------------------------
+         */
+
+        if (
+          question.chapterNo !== undefined &&
+          chapter.chapterNo !== null &&
+          chapter.chapterNo !== question.chapterNo
+        ) {
+          throw new BadRequestException(
+            `Chapter number mismatch for "${question.chapterName}". Excel: ${question.chapterNo}, Database: ${chapter.chapterNo}`,
+          );
+        }
+
+        /*
+         * -----------------------------------------------------
+         * Check Duplicate Question
+         *
+         * Database uniqueness:
+         * chapterId + medium + externalId
+         * -----------------------------------------------------
+         */
+
+        const existingQuestion = await tx.question.findUnique({
+          where: {
+            chapterId_medium_externalId: {
+              chapterId: chapter.id,
+              medium: question.medium!,
+              externalId: question.externalId,
+            },
+          },
+        });
+
+        if (existingQuestion) {
+          throw new BadRequestException(
+            `Question with externalId "${question.externalId}" already exists in chapter "${chapter.name}" for ${question.medium}`,
+          );
+        }
+
+        /*
+         * -----------------------------------------------------
+         * Create Question
+         * -----------------------------------------------------
+         */
+
+        const createdQuestion = await tx.question.create({
+          data: {
+            externalId: question.externalId,
+
+            questionText: question.question,
+
+            questionContent: {
+              text: question.question,
+            },
+
+            answerContent: question.answer
+              ? {
+                  text: question.answer,
+                }
+              : undefined,
+
+            type: question.type!,
+
+            difficulty: question.difficulty ?? Difficulty.MEDIUM,
+
+            medium: question.medium!,
+
+            subjectId: subject.id,
+
+            chapterId: chapter.id,
+
+            isActive: true,
+          },
+        });
+
+        importedQuestions++;
+
+        /*
+         * -----------------------------------------------------
+         * Create MCQ Options
+         * -----------------------------------------------------
+         */
+
+        if (question.type === QuestionType.MCQ) {
+          const options = [
+            {
+              optionKey: 'A',
+              optionText: question.optionA,
+            },
+            {
+              optionKey: 'B',
+              optionText: question.optionB,
+            },
+            {
+              optionKey: 'C',
+              optionText: question.optionC,
+            },
+            {
+              optionKey: 'D',
+              optionText: question.optionD,
+            },
+          ];
+
+          await tx.questionOption.createMany({
+            data: options.map((option) => ({
+              optionKey: option.optionKey,
+              optionText: option.optionText,
+              questionId: createdQuestion.id,
+            })),
+          });
+
+          importedOptions += options.length;
+        }
+      }
+
+      /*
+       * ---------------------------------------------------------
+       * Import Summary
+       * ---------------------------------------------------------
+       */
+
+      return {
+        message: 'Questions imported successfully',
+        totalQuestions: questions.length,
+        importedQuestions,
+        importedOptions,
+      };
+    });
+  }
+
   /*
    * =========================================================
    * Helper Methods
