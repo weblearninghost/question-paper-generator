@@ -240,7 +240,7 @@ model QuestionOption {
   id         String @id @default(cuid())
   optionText String
   optionKey  String
-
+  isCorrect Boolean @default(false)
   questionId String
   question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
 

@@ -595,18 +595,22 @@ export class QuestionBankService {
             {
               optionKey: 'A',
               optionText: question.optionA,
+              isCorrect: question.correctAnswer === 'A',
             },
             {
               optionKey: 'B',
               optionText: question.optionB,
+              isCorrect: question.correctAnswer === 'B',
             },
             {
               optionKey: 'C',
               optionText: question.optionC,
+              isCorrect: question.correctAnswer === 'C',
             },
             {
               optionKey: 'D',
               optionText: question.optionD,
+              isCorrect: question.correctAnswer === 'D',
             },
           ];
 
@@ -614,10 +618,10 @@ export class QuestionBankService {
             data: options.map((option) => ({
               optionKey: option.optionKey,
               optionText: option.optionText,
+              isCorrect: option.isCorrect,
               questionId: createdQuestion.id,
             })),
           });
-
           importedOptions += options.length;
         }
       }
