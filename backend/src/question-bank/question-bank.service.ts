@@ -641,6 +641,91 @@ export class QuestionBankService {
     });
   }
 
+  async getQuestions(filters: {
+    classId?: string;
+    subjectId?: string;
+    chapterId?: string;
+    medium?: Medium;
+    type?: QuestionType;
+    difficulty?: Difficulty;
+  }) {
+    const where: any = {
+      isActive: true,
+    };
+
+    if (filters.subjectId) {
+      where.subjectId = filters.subjectId;
+    }
+
+    if (filters.chapterId) {
+      where.chapterId = filters.chapterId;
+    }
+
+    if (filters.medium) {
+      where.medium = filters.medium;
+    }
+
+    if (filters.type) {
+      where.type = filters.type;
+    }
+
+    if (filters.difficulty) {
+      where.difficulty = filters.difficulty;
+    }
+
+    if (filters.classId) {
+      where.subject = {
+        classId: filters.classId,
+      };
+    }
+
+    return this.prisma.question.findMany({
+      where,
+      orderBy: {
+        createdAt: 'asc',
+      },
+      select: {
+        id: true,
+        externalId: true,
+        questionText: true,
+        questionContent: true,
+        answerContent: true,
+        type: true,
+        difficulty: true,
+        medium: true,
+        subjectId: true,
+        chapterId: true,
+
+        subject: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+
+        chapter: {
+          select: {
+            id: true,
+            name: true,
+            chapterNo: true,
+          },
+        },
+
+        options: {
+          orderBy: {
+            optionKey: 'asc',
+          },
+          select: {
+            id: true,
+            optionKey: true,
+            optionText: true,
+            isCorrect: true,
+          },
+        },
+      },
+    });
+  }
+
   /*
    * =========================================================
    * Helper Methods
