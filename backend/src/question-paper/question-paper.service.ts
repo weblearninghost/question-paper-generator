@@ -175,4 +175,104 @@ export class QuestionPaperService {
       totalQuestions: selectedQuestions.length,
     };
   }
+  async getQuestionPaper(paperId: string) {
+    const paper = await this.prisma.questionPaper.findUnique({
+      where: {
+        id: paperId,
+      },
+
+      select: {
+        id: true,
+        title: true,
+        medium: true,
+        totalMarks: true,
+        durationMinutes: true,
+
+        createdAt: true,
+
+        class: {
+          select: {
+            id: true,
+            name: true,
+            classNo: true,
+          },
+        },
+
+        subject: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+
+        questions: {
+          orderBy: {
+            questionNo: 'asc',
+          },
+
+          select: {
+            id: true,
+            questionNo: true,
+            marks: true,
+            sectionName: true,
+
+            question: {
+              select: {
+                id: true,
+                externalId: true,
+                questionText: true,
+                questionContent: true,
+                answerContent: true,
+                type: true,
+                difficulty: true,
+                medium: true,
+
+                chapter: {
+                  select: {
+                    id: true,
+                    name: true,
+                    chapterNo: true,
+                  },
+                },
+
+                options: {
+                  orderBy: {
+                    optionKey: 'asc',
+                  },
+
+                  select: {
+                    id: true,
+                    optionKey: true,
+                    optionText: true,
+                  },
+                },
+
+                media: {
+                  orderBy: {
+                    sortOrder: 'asc',
+                  },
+
+                  select: {
+                    id: true,
+                    type: true,
+                    location: true,
+                    storageKey: true,
+                    fileName: true,
+                    mimeType: true,
+                    sortOrder: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!paper) {
+      throw new BadRequestException('Question paper not found');
+    }
+
+    return paper;
+  }
 }

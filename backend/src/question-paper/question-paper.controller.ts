@@ -1,4 +1,12 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  Req,
+  UseGuards,
+  Get,
+  Param,
+} from '@nestjs/common';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -16,5 +24,11 @@ export class QuestionPaperController {
     @Body() dto: GenerateQuestionPaperDto,
   ) {
     return this.questionPaperService.generateQuestionPaper(req.user.id, dto);
+  }
+
+  @Get(':paperId')
+  @UseGuards(JwtAuthGuard)
+  async getQuestionPaper(@Param('paperId') paperId: string) {
+    return this.questionPaperService.getQuestionPaper(paperId);
   }
 }
