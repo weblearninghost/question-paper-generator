@@ -8,10 +8,12 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createClassOwner(dto: CreateClassOwnerDto) {
-    const { name, email, password } = dto;
+    const { name, email, password, tuitionName } = dto;
 
     const existingUser = await this.prisma.user.findUnique({
-      where: { email },
+      where: {
+        email,
+      },
     });
 
     if (existingUser) {
@@ -20,21 +22,42 @@ export class UsersService {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const user = await this.prisma.user.create({
-      data: {
-        name,
-        email,
-        passwordHash,
-        role: 'CLASS_OWNER',
-      },
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Create Class Owner
+      const user = await tx.user.create({
+        data: {
+          name,
+          email,
+          passwordHash,
+          role: 'CLASS_OWNER',
+        },
+      });
+
+      // Create Tuition for the Class Owner
+      const tuition = await tx.tuition.create({
+        data: {
+          name: tuitionName,
+          ownerId: user.id,
+        },
+      });
+
+      return {
+        user,
+        tuition,
+      };
     });
 
     return {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      isActive: user.isActive,
+      id: result.user.id,
+      name: result.user.name,
+      email: result.user.email,
+      role: result.user.role,
+      isActive: result.user.isActive,
+
+      tuition: {
+        id: result.tuition.id,
+        name: result.tuition.name,
+      },
     };
   }
 }

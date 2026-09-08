@@ -9,6 +9,7 @@ import { QuestionBankModule } from './question-bank/question-bank.module';
 import { ClassModule } from './class/class.module';
 import { SubjectModule } from './subject/subject.module';
 import { ChapterModule } from './chapter/chapter.module';
+import { QuestionPaperModule } from './question-paper/question-paper.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { ChapterModule } from './chapter/chapter.module';
     ClassModule,
     SubjectModule,
     ChapterModule,
+    QuestionPaperModule,
   ],
   controllers: [AppController],
   providers: [AppService],
