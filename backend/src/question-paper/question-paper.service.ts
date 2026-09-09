@@ -297,6 +297,15 @@ export class QuestionPaperService {
         medium: true,
         totalMarks: true,
         durationMinutes: true,
+        tuition: {
+          select: {
+            id: true,
+            name: true,
+            logoStorageKey: true,
+            logoFileName: true,
+            logoMimeType: true,
+          },
+        },
 
         class: {
           select: {
@@ -349,10 +358,11 @@ export class QuestionPaperService {
     if (!paper) {
       throw new BadRequestException('Question paper not found');
     }
+    console.log('ANSWER SHEET DATA:', JSON.stringify(paper, null, 2));
 
     return {
       id: paper.id,
-      title: `${paper.title} - Answer Sheet`,
+      title: `${paper.title}`,
       medium: paper.medium,
       totalMarks: paper.totalMarks,
       durationMinutes: paper.durationMinutes,

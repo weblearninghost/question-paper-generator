@@ -59,4 +59,23 @@ export class QuestionPaperController {
     pdf.pipe(res);
     pdf.end();
   }
+
+  @Get(':paperId/answer-sheet/pdf')
+  @UseGuards(JwtAuthGuard)
+  async generateAnswerSheetPdf(
+    @Param('paperId') paperId: string,
+    @Res() res: Response,
+  ) {
+    const paper = await this.questionPaperService.getAnswerSheet(paperId);
+
+    const pdf = this.pdfService.generateAnswerSheet(paper);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="answer-sheet-${paperId}.pdf"`,
+    });
+
+    pdf.pipe(res);
+    pdf.end();
+  }
 }
