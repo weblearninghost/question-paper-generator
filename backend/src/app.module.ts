@@ -10,6 +10,8 @@ import { ClassModule } from './class/class.module';
 import { SubjectModule } from './subject/subject.module';
 import { ChapterModule } from './chapter/chapter.module';
 import { QuestionPaperModule } from './question-paper/question-paper.module';
+import { TuitionModule } from './tuition/tuition.module';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
@@ -24,6 +26,8 @@ import { QuestionPaperModule } from './question-paper/question-paper.module';
     SubjectModule,
     ChapterModule,
     QuestionPaperModule,
+    TuitionModule,
+    StorageModule,
   ],
   controllers: [AppController],
   providers: [AppService],

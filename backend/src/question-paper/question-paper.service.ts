@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 
-import { Difficulty, Medium, QuestionType } from '@prisma/client';
+import { Difficulty, Medium, QuestionType, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { GenerateQuestionPaperDto } from './dto/generate-question-paper.dto';
@@ -274,5 +274,94 @@ export class QuestionPaperService {
     }
 
     return paper;
+  }
+
+  async getAnswerSheet(paperId: string) {
+    const paper = await this.prisma.questionPaper.findUnique({
+      where: {
+        id: paperId,
+      },
+
+      select: {
+        id: true,
+        title: true,
+        medium: true,
+        totalMarks: true,
+        durationMinutes: true,
+
+        class: {
+          select: {
+            id: true,
+            name: true,
+            classNo: true,
+          },
+        },
+
+        subject: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+
+        questions: {
+          orderBy: {
+            questionNo: 'asc',
+          },
+
+          select: {
+            questionNo: true,
+            marks: true,
+            sectionName: true,
+
+            question: {
+              select: {
+                id: true,
+                type: true,
+                answerContent: true,
+
+                options: {
+                  where: {
+                    isCorrect: true,
+                  },
+
+                  select: {
+                    optionKey: true,
+                    optionText: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!paper) {
+      throw new BadRequestException('Question paper not found');
+    }
+
+    return {
+      id: paper.id,
+      title:`${paper.title} - Answer Sheet`,
+      medium: paper.medium,
+      totalMarks: paper.totalMarks,
+      durationMinutes: paper.durationMinutes,
+      class: paper.class,
+      subject: paper.subject,
+      
+      questions: paper.questions.map((item) => ({
+        questionNo: item.questionNo,
+        marks: item.marks,
+        sectionName: item.sectionName,
+
+        type: item.question.type,
+
+        correctAnswer:
+          item.question.type === QuestionType.MCQ
+            ? (item.question.options[0] ?? null)
+            : item.question.answerContent,
+      })),
+    };
   }
 }

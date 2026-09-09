@@ -31,4 +31,10 @@ export class QuestionPaperController {
   async getQuestionPaper(@Param('paperId') paperId: string) {
     return this.questionPaperService.getQuestionPaper(paperId);
   }
+
+  @Get(':paperId/answer-sheet')
+  @UseGuards(JwtAuthGuard)
+  async getAnswerSheet(@Param('paperId') paperId: string) {
+    return this.questionPaperService.getAnswerSheet(paperId);
+  }
 }
