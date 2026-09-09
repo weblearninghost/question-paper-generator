@@ -187,6 +187,15 @@ export class QuestionPaperService {
         medium: true,
         totalMarks: true,
         durationMinutes: true,
+        tuition: {
+          select: {
+            id: true,
+            name: true,
+            logoStorageKey: true,
+            logoFileName: true,
+            logoMimeType: true,
+          },
+        },
 
         createdAt: true,
 
@@ -343,13 +352,13 @@ export class QuestionPaperService {
 
     return {
       id: paper.id,
-      title:`${paper.title} - Answer Sheet`,
+      title: `${paper.title} - Answer Sheet`,
       medium: paper.medium,
       totalMarks: paper.totalMarks,
       durationMinutes: paper.durationMinutes,
       class: paper.class,
       subject: paper.subject,
-      
+
       questions: paper.questions.map((item) => ({
         questionNo: item.questionNo,
         marks: item.marks,

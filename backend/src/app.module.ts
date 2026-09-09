@@ -12,6 +12,7 @@ import { ChapterModule } from './chapter/chapter.module';
 import { QuestionPaperModule } from './question-paper/question-paper.module';
 import { TuitionModule } from './tuition/tuition.module';
 import { StorageModule } from './storage/storage.module';
+import { PdfModule } from './pdf/pdf.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { StorageModule } from './storage/storage.module';
     QuestionPaperModule,
     TuitionModule,
     StorageModule,
+    PdfModule,
   ],
   controllers: [AppController],
   providers: [AppService],
