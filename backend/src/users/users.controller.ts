@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards, Get, Req } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 
 import { UsersService } from './users.service';
@@ -16,5 +16,10 @@ export class UsersController {
   @Roles(UserRole.SUPER_ADMIN)
   createClassOwner(@Body() dto: CreateClassOwnerDto) {
     return this.usersService.createClassOwner(dto);
+  }
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  getMe(@Req() req: any) {
+    return this.usersService.getMe(req.user.id);
   }
 }

@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -47,10 +51,32 @@ export class StorageService {
     try {
       await fs.unlink(filePath);
     } catch (error: any) {
-      // File may already have been deleted.
       if (error.code !== 'ENOENT') {
         throw error;
       }
     }
+  }
+
+  async getFilePath(storageKey: string) {
+    if (!storageKey) {
+      throw new NotFoundException('File not found');
+    }
+
+    const filePath = path.resolve(this.uploadDirectory, storageKey);
+
+    const uploadDirectory = path.resolve(this.uploadDirectory);
+
+    // Prevent accessing files outside uploads/
+    if (!filePath.startsWith(`${uploadDirectory}${path.sep}`)) {
+      throw new NotFoundException('File not found');
+    }
+
+    try {
+      await fs.access(filePath);
+    } catch {
+      throw new NotFoundException('File not found');
+    }
+
+    return filePath;
   }
 }

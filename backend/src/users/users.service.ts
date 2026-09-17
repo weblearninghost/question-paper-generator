@@ -60,4 +60,35 @@ export class UsersService {
       },
     };
   }
+  async getMe(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+      include: {
+        tuition: true,
+      },
+    });
+
+    if (!user) {
+      throw new ConflictException('User not found');
+    }
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive,
+
+      tuition: user.tuition
+        ? {
+            id: user.tuition.id,
+            name: user.tuition.name,
+            logoStorageKey: user.tuition.logoStorageKey,
+            logoFileName: user.tuition.logoFileName,
+          }
+        : null,
+    };
+  }
 }
